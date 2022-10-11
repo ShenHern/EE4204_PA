@@ -1,0 +1,1 @@
+/usr/bin/cc -g   CMakeFiles/headsock.h.dir/Client/tcp_client3.c.o CMakeFiles/headsock.h.dir/Server/tcp_ser3.c.o  -o headsock.h 

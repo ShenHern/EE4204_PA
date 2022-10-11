@@ -1,0 +1,1 @@
+/usr/bin/cc -g   CMakeFiles/Ex3.dir/Client/tcp_client3.c.o CMakeFiles/Ex3.dir/Server/tcp_ser3.c.o  -o Ex3 
