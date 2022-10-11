@@ -18,8 +18,8 @@
 #define MYUDP_PORT 5350
 #define DATALEN 500
 #define BUFSIZE 60000
-#define PACKLEN 508
 #define HEADLEN 8
+#define PACKLEN (DATALEN + HEADLEN)
 
 struct pack_so			//data packet structure
 {

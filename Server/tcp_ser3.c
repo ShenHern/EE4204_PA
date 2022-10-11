@@ -6,6 +6,7 @@ tcp_ser.c: the source file of the server in tcp transmission
 #include "headsock.h"
 
 #define BACKLOG 10
+#define BATCHSIZE 1
 
 void str_ser(int sockfd);                                                        // transmitting and receiving function
 
@@ -71,7 +72,7 @@ void str_ser(int sockfd)
 {
 	char buf[BUFSIZE];
 	FILE *fp;
-	char recvs[DATALEN];
+	char recvs[PACKLEN];
 	struct ack_so ack;
 	int end, n = 0;
 	long lseek=0;
@@ -81,7 +82,7 @@ void str_ser(int sockfd)
 
 	while(!end)
 	{
-		if ((n= recv(sockfd, &recvs, DATALEN, 0))==-1)                                   //receive the packet
+		if ((n= recv(sockfd, &recvs, PACKLEN, 0))==-1)                                   //receive the packet
 		{
 			printf("error when receiving\n");
 			exit(1);

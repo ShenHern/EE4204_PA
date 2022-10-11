@@ -4,6 +4,8 @@ tcp_client.c: the source file of the client in tcp transmission
 
 #include "headsock.h"
 
+#define BATCHSIZE 1
+
 float str_cli(FILE *fp, int sockfd, long *len);                       //transmission function
 void tv_sub(struct  timeval *out, struct timeval *in);	    //calcu the time interval between out and in
 
@@ -19,7 +21,8 @@ int main(int argc, char **argv)
 	FILE *fp;
 
 	if (argc != 2) {
-		printf("parameters not match");
+		printf("parameters not match\n");
+        exit(0);
 	}
 
 	sh = gethostbyname(argv[1]);	                                       //get host's information
@@ -66,7 +69,7 @@ int main(int argc, char **argv)
 	}
 
 	ti = str_cli(fp, sockfd, &len);                       //perform the transmission and receiving
-	rt = (len/(float)ti);                                         //caculate the average transmission rate
+	rt = (len/(float)ti);                                         //caculate the average transmission rate (total_bytes_sent / total time)
 	printf("Time(ms) : %.3f, Data sent(byte): %d\nData rate: %f (Kbytes/s)\n", ti, (int)len, rt);
 
 	close(sockfd);
@@ -81,10 +84,15 @@ float str_cli(FILE *fp, int sockfd, long *len)
 	long lsize, ci;
 	char sends[DATALEN];
 	struct ack_so ack;
+    struct pack_so pack;
 	int n, slen;
 	float time_inv = 0.0;
 	struct timeval sendt, recvt;
 	ci = 0;
+    int total_bytes_sent = 0;
+    int num_packs_sent = 0;
+    int last_seq_sent = 0;
+    int next_expected_seq = 0;
 
 	fseek (fp , 0 , SEEK_END);
 	lsize = ftell (fp);
@@ -109,12 +117,37 @@ float str_cli(FILE *fp, int sockfd, long *len)
 		else 
 			slen = DATALEN;
 		memcpy(sends, (buf+ci), slen);
-		n = send(sockfd, &sends, slen, 0);
+
+        //setting up packet with payload and header
+        pack.num = last_seq_sent;
+        pack.len = PACKLEN;
+        bcopy(sends, pack.data, slen);
+
+        //send it
+		n = send(sockfd, &pack, PACKLEN, 0);
 		if(n == -1) {
 			printf("send error!");								//send the data
 			exit(1);
 		}
+
+        total_bytes_sent += n; //payload and header
+        last_seq_sent = pack.num;
+        num_packs_sent++;
+        next_expected_seq = last_seq_sent + 1;
+
+        //wait for the ACK after sending a batch of packets
+        if (num_packs_sent % BATCHSIZE == 0) {
+            n = recv(sockfd, &ack, 2, 0);
+            if (n == -1) {
+                printf("error when receiving\n");
+                exit(1);
+            }
+            if (ack.num != next_expected_seq|| ack.len != 0)
+                printf("error in ACK\n");
+        }
+
 		ci += slen;
+        pack.num = (pack.num + 1) % 7; //generate a seq num of 0-6
 	}
 	if ((n= recv(sockfd, &ack, 2, 0))==-1)                                   //receive the ack
 	{
@@ -124,7 +157,7 @@ float str_cli(FILE *fp, int sockfd, long *len)
 	if (ack.num != 1|| ack.len != 0)
 		printf("error in transmission\n");
 	gettimeofday(&recvt, NULL);
-	*len= ci;                                                         //get current time
+	*len= total_bytes_sent;                                                         //get current time
 	tv_sub(&recvt, &sendt);                                                                 // get the whole trans time
 	time_inv += (recvt.tv_sec)*1000.0 + (recvt.tv_usec)/1000.0;
 	return(time_inv);
