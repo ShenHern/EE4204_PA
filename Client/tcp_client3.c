@@ -4,7 +4,6 @@ tcp_client.c: the source file of the client in tcp transmission
 
 #include "headsock.h"
 
-#define BATCHSIZE 1
 
 float str_cli(FILE *fp, int sockfd, long *len);                       //transmission function
 void tv_sub(struct  timeval *out, struct timeval *in);	    //calcu the time interval between out and in
@@ -20,7 +19,7 @@ int main(int argc, char **argv)
 	struct in_addr **addrs;
 	FILE *fp;
 
-	if (argc != 2) {
+	if (argc != 3) {
 		printf("parameters not match\n");
         exit(0);
 	}
@@ -30,6 +29,8 @@ int main(int argc, char **argv)
 		printf("error when gethostby name");
 		exit(0);
 	}
+
+    char * filename = argv[2];
 
 	printf("canonical name: %s\n", sh->h_name);					//print the remote host's information
 	for (pptr=sh->h_aliases; *pptr != NULL; pptr++)
@@ -62,11 +63,14 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 	
-	if((fp = fopen ("myfile.txt","r+t")) == NULL)
+	if((fp = fopen (filename,"r+t")) == NULL)
 	{
 		printf("File doesn't exit\n");
 		exit(0);
 	}
+    fseek (fp , 0 , SEEK_END);
+    int filesize = ftell (fp);
+    rewind (fp);
 
 	ti = str_cli(fp, sockfd, &len);                       //perform the transmission and receiving
 	rt = (len/(float)ti);                                         //caculate the average transmission rate (total_bytes_sent / total time)
@@ -74,6 +78,7 @@ int main(int argc, char **argv)
 
 	close(sockfd);
 	fclose(fp);
+    fp = fopen("stats.csv", "w+t");
 //}
 	exit(0);
 }
@@ -92,7 +97,8 @@ float str_cli(FILE *fp, int sockfd, long *len)
     int total_bytes_sent = 0;
     int num_packs_sent = 0;
     int last_seq_sent = 0;
-    int next_expected_seq = 0;
+    int next_expected_seq;
+    pack.num = 0;
 
 	fseek (fp , 0 , SEEK_END);
 	lsize = ftell (fp);
@@ -119,8 +125,7 @@ float str_cli(FILE *fp, int sockfd, long *len)
 		memcpy(sends, (buf+ci), slen);
 
         //setting up packet with payload and header
-        pack.num = last_seq_sent;
-        pack.len = PACKLEN;
+        pack.len = slen;
         bcopy(sends, pack.data, slen);
 
         //send it
@@ -133,7 +138,7 @@ float str_cli(FILE *fp, int sockfd, long *len)
         total_bytes_sent += n; //payload and header
         last_seq_sent = pack.num;
         num_packs_sent++;
-        next_expected_seq = last_seq_sent + 1;
+        next_expected_seq = (last_seq_sent + 1) % 7;
 
         //wait for the ACK after sending a batch of packets
         if (num_packs_sent % BATCHSIZE == 0) {

@@ -6,7 +6,7 @@ tcp_ser.c: the source file of the server in tcp transmission
 #include "headsock.h"
 
 #define BACKLOG 10
-#define BATCHSIZE 1
+
 
 void str_ser(int sockfd);                                                        // transmitting and receiving function
 
@@ -73,27 +73,44 @@ void str_ser(int sockfd)
 	char buf[BUFSIZE];
 	FILE *fp;
 	char recvs[PACKLEN];
+    struct pack_so pack;
 	struct ack_so ack;
 	int end, n = 0;
 	long lseek=0;
 	end = 0;
+    int num_packs_recv = 0;
 	
 	printf("receiving data!\n");
 
 	while(!end)
 	{
-		if ((n= recv(sockfd, &recvs, PACKLEN, 0))==-1)                                   //receive the packet
+		if ((n= recv(sockfd, &pack, PACKLEN, 0))==-1)                                   //receive the packet
 		{
 			printf("error when receiving\n");
 			exit(1);
 		}
-		if (recvs[n-1] == '\0')									//if it is the end of the file
+        num_packs_recv++;
+
+		if (pack.data[pack.len-1] == '\0')									//if it is the end of the file
 		{
 			end = 1;
-			n --;
+			pack.len --;
 		}
-		memcpy((buf+lseek), recvs, n);
-		lseek += n;
+
+        //send the ACK after receiving a batch of packets
+        if (num_packs_recv%BATCHSIZE == 0) {
+            //build the ack
+            ack.num = (pack.num + 1) % 7;
+            ack.len = 0;
+
+            int ack_n = send(sockfd, &ack, 2, 0);
+            if (ack_n == -1) {
+                printf("error sending ACK!");								//send the ack
+                exit(1);
+            }
+        }
+		memcpy((buf+lseek), pack.data, pack.len); //copying from packet data to file buffer
+		lseek += pack.len;
 	}
 	ack.num = 1;
 	ack.len = 0;
@@ -102,7 +119,7 @@ void str_ser(int sockfd)
 			printf("send error!");								//send the ack
 			exit(1);
 	}
-	if ((fp = fopen ("myTCPreceive.txt","wt")) == NULL)
+	if ((fp = fopen ("myTCPreceive.txt","w+t")) == NULL)
 	{
 		printf("File doesn't exit\n");
 		exit(0);
