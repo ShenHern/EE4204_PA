@@ -104,6 +104,8 @@ float str_cli(FILE *fp, int sockfd, long *len)
     int num_packs_sent = 0;
     int last_seq_sent = 0;
     int next_expected_seq;
+    int cacheoffset = 0;
+    char cache[BATCHSIZE * PACKLEN];
     pack.num = 0;
 
 	fseek (fp , 0 , SEEK_END);
@@ -146,15 +148,41 @@ float str_cli(FILE *fp, int sockfd, long *len)
         num_packs_sent++;
         next_expected_seq = (last_seq_sent + 1) % 7;
 
+        //cache the packets to resend in case of unreliable connection
+        memcpy(cache+(cacheoffset*PACKLEN), &pack, PACKLEN);
+        cacheoffset = (cacheoffset + 1) % BATCHSIZE;
+
         //wait for the ACK after sending a batch of packets
         if (num_packs_sent % BATCHSIZE == 0) {
-            n = recv(sockfd, &ack, 2, 0);
-            if (n == -1) {
-                printf("error when receiving\n");
-                exit(1);
+            while(1) {
+                /*setup select function*/
+                fd_set select_fds;
+                struct timeval timeout;
+                FD_ZERO(&select_fds);
+                FD_SET(sockfd, &select_fds);
+                timeout.tv_sec = 5;
+                timeout.tv_usec = 0;
+
+                //wait for ack otherwise timeout
+                if (select(32, &select_fds, 0, 0, &timeout) == 0) {
+                    printf("Timeout on receiving ACK\n");
+                    //send the cached window again
+                    send(sockfd, cache, sizeof(cache), 0);
+                    continue;
+                }
+                n = recv(sockfd, &ack, 2, 0);
+                if (n == -1) {
+                    printf("error when receiving\n");
+                    exit(1);
+                }
+                if (ack.num != next_expected_seq || ack.len != 0) {
+                    printf("error in ACK\n");
+                    //send the cached window again
+                    send(sockfd, cache, sizeof(cache), 0);
+                    continue;
+                }
+                break;
             }
-            if (ack.num != next_expected_seq|| ack.len != 0)
-                printf("error in ACK\n");
         }
 
 		ci += slen;
