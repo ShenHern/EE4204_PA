@@ -5,7 +5,7 @@ tcp_client.c: the source file of the client in tcp transmission
 #include "headsock.h"
 
 
-float str_cli(FILE *fp, int sockfd, long *len);                       //transmission function
+float str_cli(FILE *fp, int sockfd, long *len, char * filename);                       //transmission function
 void tv_sub(struct  timeval *out, struct timeval *in);	    //calcu the time interval between out and in
 
 int main(int argc, char **argv)
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 	
-	if((fp = fopen (filename,"r+t")) == NULL)
+	if((fp = fopen (filename,"r")) == NULL)
 	{
 		printf("File doesn't exit\n");
 		exit(0);
@@ -72,7 +72,7 @@ int main(int argc, char **argv)
     int filesize = ftell (fp);
     rewind (fp);
 
-	ti = str_cli(fp, sockfd, &len);                       //perform the transmission and receiving
+	ti = str_cli(fp, sockfd, &len, filename);                       //perform the transmission and receiving
 	rt = (len/(float)ti);                                         //caculate the average transmission rate (total_bytes_sent / total time)
 	printf("Time(ms) : %.3f, Data sent(byte): %d\nData rate: %f (Kbytes/s)\n", ti, (int)len, rt);
 
@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 	exit(0);
 }
 
-float str_cli(FILE *fp, int sockfd, long *len)
+float str_cli(FILE *fp, int sockfd, long *len, char * filename)
 {
 	char *buf;
 	long lsize, ci;
@@ -113,6 +113,14 @@ float str_cli(FILE *fp, int sockfd, long *len)
 	rewind (fp);
 	printf("The file length is %d bytes\n", (int)lsize);
 	printf("the packet length is %d bytes\n",DATALEN);
+
+    //send the filename
+    n = send(sockfd, filename, strlen(filename), 0);
+    if(n == -1) {
+        printf("error sending filename!");								//send the data
+        exit(1);
+    }
+
 
 // allocate memory to contain the whole file.
 	buf = (char *) malloc (lsize);

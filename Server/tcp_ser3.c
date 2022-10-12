@@ -79,8 +79,15 @@ void str_ser(int sockfd)
 	long lseek=0;
 	end = 0;
     int num_packs_recv = 0;
-	
+	char filename[20];
+
 	printf("receiving data!\n");
+    //receive the filename
+    n = recv(sockfd, filename, sizeof(filename), 0);
+    if (n == -1) {
+        printf("error receiving file name\n");
+        exit(1);
+    }
 
 	while(!end)
 	{
@@ -119,7 +126,7 @@ void str_ser(int sockfd)
 			printf("send error!");								//send the ack
 			exit(1);
 	}
-	if ((fp = fopen ("myTCPreceive.txt","w+t")) == NULL)
+	if ((fp = fopen (filename,"w")) == NULL)
 	{
 		printf("File doesn't exit\n");
 		exit(0);
