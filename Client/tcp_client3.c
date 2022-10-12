@@ -78,7 +78,13 @@ int main(int argc, char **argv)
 
 	close(sockfd);
 	fclose(fp);
-    fp = fopen("stats.csv", "w+t");
+//
+    //logging results
+    FILE * logfp = fopen("stats.csv", "a");
+    char csv_string[50];
+    sprintf( csv_string, "%d,%d,%d,%.3f,%ld,%.3f\n", BATCHSIZE, DATALEN, filesize, ti, len, rt);
+    fwrite(csv_string, sizeof(char), strlen(csv_string), logfp);
+    fclose(logfp);
 //}
 	exit(0);
 }

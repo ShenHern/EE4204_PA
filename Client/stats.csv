@@ -1,1 +1,3 @@
-filesize,time(ms),data_sent(bytes),data_rate(Kbytes/s)
+window_size,DU_size,filesize,time(ms),data_sent(bytes),data_rate(kbytes/s)
+4,500,59792,2.568,60960,23738.316
+4,500,59792,2.465,60960,24730.225
