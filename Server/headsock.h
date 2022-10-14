@@ -19,7 +19,7 @@
 #define DATALEN 500
 #define BUFSIZE 60000
 #define HEADLEN 8
-#define BATCHSIZE 1
+#define BATCHSIZE 4
 #define PACKLEN (DATALEN + HEADLEN)
 
 struct pack_so			//data packet structure

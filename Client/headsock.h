@@ -16,10 +16,10 @@
 #define NEWFILE (O_WRONLY|O_CREAT|O_TRUNC)
 #define MYTCP_PORT 4950
 #define MYUDP_PORT 5350
-#define DATALEN 500
+#define DATALEN 5000
 #define BUFSIZE 60000
 #define HEADLEN 8
-#define BATCHSIZE 1
+#define BATCHSIZE 4
 #define PACKLEN (DATALEN + HEADLEN)
 
 struct pack_so			//data packet structure
